@@ -73,7 +73,7 @@
      <!-- android -->
     <platform name="android">
         <preference name="LICENSE" default="YOUR_LICENSE_KEY" />
-        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+        <config-file target="app/src/main/AndroidManifest.xml" parent="/manifest/application" mode="merge">
             <meta-data android:name="com.transistorsoft.locationmanager.license" android:value="$LICENSE" />
 
             <service android:name="com.transistorsoft.cordova.bggeo.HeadlessJobService" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true" />
