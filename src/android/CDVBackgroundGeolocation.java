@@ -42,7 +42,7 @@ import android.util.Log;
 
 public class CDVBackgroundGeolocation extends CordovaPlugin {
     private static final String TAG = "TSLocationManager";
-    private static final String HEADLESS_JOB_SERVICE_CLASS = "HeadlessJobService";
+    private static final String HEADLESS_JOB_SERVICE_CLASS = "BackgroundGeolocationHeadlessTask";
 
     public static final int REQUEST_ACTION_START = 1;
     public static final int REQUEST_ACTION_GET_CURRENT_POSITION = 2;
@@ -97,6 +97,10 @@ public class CDVBackgroundGeolocation extends CordovaPlugin {
 
         TSConfig config = TSConfig.getInstance(activity.getApplicationContext());
         config.useCLLocationAccuracy(true);
+        // Ensure HeadlessJobService is set.
+        config.updateWithBuilder()
+            .setHeadlessJobService(getClass().getPackage().getName() + "." + HEADLESS_JOB_SERVICE_CLASS)
+            .commit();
 
         if (launchIntent.hasExtra("forceReload")) {
             activity.moveTaskToBack(true);
@@ -294,7 +298,7 @@ public class CDVBackgroundGeolocation extends CordovaPlugin {
 
         if (config.isFirstBoot()) {
             config.updateWithJSONObject(setHeadlessJobService(params));
-        } else if (params.has("reset") && params.getBoolean("reset")) {
+        } else if (params.has("reset") && (params.getBoolean("reset") == true)) {
             config.reset();
             config.updateWithJSONObject(setHeadlessJobService(params));
         }
@@ -665,16 +669,10 @@ public class CDVBackgroundGeolocation extends CordovaPlugin {
 
     private void addEnabledChangeListener(final CallbackContext callbackContext) {
         TSEnabledChangeCallback callback = new TSEnabledChangeCallback() {
-            @Override public void onEnabledChange(boolean b) {
-                JSONObject params = new JSONObject();
-                try {
-                    params.put("enabled", TSConfig.getInstance(cordova.getActivity().getApplicationContext()).getEnabled());
-                    PluginResult result = new PluginResult(PluginResult.Status.OK, params);
-                    result.setKeepCallback(true);
-                    callbackContext.sendPluginResult(result);
-                } catch (JSONException e) {
-                    callbackContext.error(e.getMessage());
-                }
+            @Override public void onEnabledChange(boolean enabled) {
+                PluginResult result = new PluginResult(PluginResult.Status.OK, enabled);
+                result.setKeepCallback(true);
+                callbackContext.sendPluginResult(result);
             }
         };
         registerCallback(callbackContext, callback);
@@ -778,17 +776,9 @@ public class CDVBackgroundGeolocation extends CordovaPlugin {
     private void addHttpListener(final CallbackContext callbackContext) {
         TSHttpResponseCallback callback = new TSHttpResponseCallback() {
             @Override public void onHttpResponse(HttpResponse response) {
-                JSONObject params = new JSONObject();
-                try {
-                    params.put("success", response.isSuccess());
-                    params.put("status", response.status);
-                    params.put("responseText", response.responseText);
-                    PluginResult result = new PluginResult((response.isSuccess()) ? PluginResult.Status.OK : PluginResult.Status.ERROR, params);
-                    result.setKeepCallback(true);
-                    callbackContext.sendPluginResult(result);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                PluginResult result = new PluginResult(PluginResult.Status.OK, response.toJson());
+                result.setKeepCallback(true);
+                callbackContext.sendPluginResult(result);
             }
         };
         registerCallback(callbackContext, callback);
